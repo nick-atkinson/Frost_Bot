@@ -87,7 +87,7 @@ async def on_message(message):
      '!cat - Displays a random image of a cat using thecatapi.com API\n' +
      '!init - Roll for initiative. Bot monitors for initiative inputs from any player in that channel, which can be formatted as such:\n\tBofur 15  OR  15\nYou can change the name to whatever you like to add more than one entity to the initiative count.\n' +
      '!endinit - Ends the initiative count and prints out the initiative order.\n' +
-     '!addinit - Adds an entity to the current initiative count. Formatted as either:\n\tMonster 15  OR  15' +
+     '!addinit - Adds an entity to the current initiative count. Formatted as either:\n\t!addinit Monster 15  OR  !addinit 15' +
      '```')
 
   if message.content.startswith('!roll 69') or message.content.startswith('!troll 69'):
