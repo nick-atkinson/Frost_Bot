@@ -302,9 +302,6 @@ async def on_message(message):
   if message.author == client.user:
     return
   
-  if not message.author.display_name.startswith("Bofur"):
-    return
-
   if message.content.lower().startswith('!helpme'):
     await message.channel.send('**FROST BOT Commands:**\n' +
      '`!init` - Roll for initiative. Bot monitors for initiative inputs from any player in that channel.\n\tExample Responses: `Bofur 15`  or just `15`\n\tYou can change the name to whatever you like to add more than one entity to the initiative count.\n' +
@@ -408,8 +405,5 @@ async def on_message(message):
 
   if message.content.lower().startswith('!rest'):
     await message.channel.send(rest(message.guild.id))
-
-
-
 
 client.run(os.getenv('TOKEN'))
