@@ -7,7 +7,7 @@ import itertools
 import asyncio
 from replit import db
 from enum import Enum
-
+from keep_alive import keep_alive
 
 client = discord.Client()
 months = ["Földelse", "Pecunas", "Exon", "Pulchram", "Misdram", "Thaum"]
@@ -369,7 +369,7 @@ async def on_message(message):
     await channel.send('__***Roll For Initiative***__')
 
     def check(m):
-      if m.channel == channel and not m.content.startswith('!') and not m.content.startswith('-') and not m.content.startswith('/') and m.author != client.user:
+      if m.channel == channel and not m.content.startswith('!') and not m.content.startswith('-') and not m.content.startswith('/') and m.author != client.user and not m.author.display_name.startswith("Dice"):
         run_initiative(message.guild.id, m.author.display_name,  m.content)
       return m.content.startswith('!endi') and m.channel == channel
 
@@ -406,4 +406,5 @@ async def on_message(message):
   if message.content.lower().startswith('!rest'):
     await message.channel.send(rest(message.guild.id))
 
+keep_alive()
 client.run(os.getenv('TOKEN'))
