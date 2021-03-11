@@ -240,6 +240,58 @@ def back_time(guild_id):
   else:
     return "You must set the time first!"
 
+def eat(guild_id, display_name):
+  if str(guild_id)+"time" not in db:
+    return "You must set the time first!"
+
+  pName = display_name
+  obj = [pName, 0, 0, 0, 0]
+  obj[db[str(guild_id)+"time"]+1] += 1
+
+  if str(guild_id)+"eat" in db:
+    array = db[str(guild_id)+"eat"]
+    found = 0
+    for i in array:
+      if i[0].startswith(pName):
+        i[db[str(guild_id)+"time"]+1] = 1
+        found = 1
+    if found == 0:
+      array.append(obj)
+    db[str(guild_id)+"eat"] = array
+  else:
+    db[str(guild_id)+"eat"] = [obj]
+  return display_name + " has eaten!"
+
+def nutrition(guild_id):
+  if str(guild_id)+"eat" not in db:
+    return "No one has eaten yet!"
+    
+  longest = 0
+  array = db[str(guild_id)+"eat"]
+  for item in array:
+    if len(item[0]) > longest:
+      longest = len(item[0])
+  out = "***Players Who Have Eaten***\n" + " "*longest + " **Morning | Midday | Evening | Night** \n"
+  for name in array:
+    eaten = ["","","",""]
+    count = 0
+    for x in name:
+      if count == 0:
+        count = 1
+        continue
+      if x == 0:
+        eaten[count-1] = "x"
+      else:
+        eaten[count-1] = "meat_on_bone"
+      count += 1
+    out = out + name[0] + " "*(longest - len(name[0])) + "   :"+ eaten[0] +":     " + "   :"+ eaten[1] +":     " + "   :"+ eaten[2] +":     " + "   :"+ eaten[3] +":     \n"
+  return out 
+
+def rest(guild_id):
+  if str(guild_id)+"eat" in db:
+    del db[str(guild_id)+"eat"]
+  db[str(guild_id)+"time"] = 0
+  return get_time(guild_id) + " `You have rested`"
 
 @client.event
 async def on_ready():
@@ -248,6 +300,9 @@ async def on_ready():
 @client.event
 async def on_message(message):
   if message.author == client.user:
+    return
+  
+  if not message.author.display_name.startswith("Bofur"):
     return
 
   if message.content.lower().startswith('!helpme'):
@@ -266,7 +321,10 @@ async def on_message(message):
      '`!time` - Displays the current in-game time.\n' +
      '`!time set` - Sets the current time to `Morning|Midday|Evening|Night`\n\tExample Use: `!time set Morning`\n' +
      '`!time add` - Increments the current time.\n' +
-     '`!time rem` - Decrements the current time.\n\n' +
+     '`!time rem` - Decrements the current time.\n' +
+     '`!eat` - You eat! Will set yourself as having eaten for that block in time.\n'+
+     '`!nutrition` - Displays who has eaten that day. Resets upon `!rest`\n' +
+     '`!rest` - Resets the day, as well as those who have eaten.\n\n' +
      '`!troll` - Returns a True-Random integer using `Random.org` API\n\tExample Use: `!troll 3d6`\n' +
      '`!ping` - pong!\n' +
      '`!cat` - Displays a random image of a cat using `thecatapi.com` API\n' +
@@ -342,6 +400,14 @@ async def on_message(message):
   if message.content.lower().startswith('!time rem'):
     await message.channel.send(back_time(message.guild.id))
   
+  if message.content.lower().startswith('!eat'):
+    await message.channel.send(eat(message.guild.id, message.author.display_name))
+
+  if message.content.lower().startswith('!nutrition'):
+    await message.channel.send(nutrition(message.guild.id))
+
+  if message.content.lower().startswith('!rest'):
+    await message.channel.send(rest(message.guild.id))
 
 
 
