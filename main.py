@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import discord
 import os
 import requests
@@ -5,8 +6,63 @@ import json
 import itertools
 import asyncio
 from replit import db
+from enum import Enum
+
 
 client = discord.Client()
+months = ["Földelse", "Pecunas", "Exon", "Pulchram", "Misdram", "Thaum"]
+holiday = ["The Fertility Festival", "The Market Festival", "The Dance of the Stars", "The Harvest Festival", "The Festival of Endurance", "The Year's End Festival"]
+days = ["Yinday", "Reiday", "Orsday", "Yekenday", "Graceday", "Blagday", "Innesday", "Visday", "Sattarday", "Greyday"]
+
+def get_date(guild_id):
+  if str(guild_id)+"date" in db:
+    array = db[str(guild_id)+"date"]
+    weekday = holiday[array[1]]
+    if (array[0] < 31):
+      weekday = days[(array[0]-1) % 10]
+    elif (array[0] > 31):
+      weekday = days[(array[0]-1) % 10 - 1]
+    
+    prefix = "th"
+    if array[0] % 10 == 1:
+      prefix = "st"
+    elif array[0] % 10 == 2:
+      prefix = "nd"
+    elif array[0] % 10 == 3:
+      prefix = "rd"
+
+    return "The date is: " + weekday + ", the " + str(array[0]) + prefix + " of " + months[array[1]] + ", " + str(array[2])
+  return "No date set yet."
+
+def set_date(guild_id, message):
+  try:
+    date = message.content[9::].lower().split(" ")
+
+    day = int(date[0]) % 62
+    if day == 0:
+      day = 1
+    month = date[1]
+    if (len("".join(filter(str.isdigit, date[1]))) > 0):
+      month = (int(date[1])-1) % 6
+    else:
+      if (month.startswith("f")):
+        month = 0
+      elif (month.startswith("pe")):
+        month = 1
+      elif (month.startswith("e")):
+        month = 2
+      elif (month.startswith("pu")):
+        month = 3
+      elif (month.startswith("m")):
+        month = 4
+      elif (month.startswith("t")):
+        month = 5
+    year = int(date[2])
+    db[str(guild_id)+"date"] = [day, month, year]
+    return "Date Set."
+  except:
+    return "Something is wrong with your formatting. Try:\n `!setdate Day Month Year`"
+
 
 def get_cat():
   response = requests.get("https://api.thecatapi.com/v1/images/search")
@@ -31,9 +87,11 @@ def get_int(msg):
   else:
     return "`Improper Formatting.`"
 
-def run_initiative(guild_id, init_message):
-  pName = init_message.author.display_name
-  value = init_message.content.split(" ")
+def run_initiative(guild_id, display_name, init_message):
+  if(init_message.startswith("!addinit")):
+    init_message = init_message[init_message.index(" ")+1::]
+  pName = display_name
+  value = init_message.split(" ")
   roll=""
   if len(value) >= 2:
     pName = value[0]
@@ -81,31 +139,40 @@ async def on_message(message):
   if message.author == client.user:
     return
 
-  if message.content.startswith('!helpme'):
+  if message.content.lower().startswith('!helpme'):
     await message.channel.send('**FROST BOT Commands:**\n' +
-    '```!troll 1d20 - Returns a True-Random integer using Random.org API\n' +
-     '!cat - Displays a random image of a cat using thecatapi.com API\n' +
-     '!init - Roll for initiative. Bot monitors for initiative inputs from any player in that channel, which can be formatted as such:\n\tBofur 15  OR  15\nYou can change the name to whatever you like to add more than one entity to the initiative count.\n' +
-     '!endinit - Ends the initiative count and prints out the initiative order.\n' +
-     '!addinit - Adds an entity to the current initiative count. Formatted as either:\n\t!addinit Monster 15  OR  !addinit 15' +
-     '```')
+    '`!troll` - Returns a True-Random integer using Random.org API\n\tExample Use: `!troll 3d6`\n' +
+     '`!cat` - Displays a random image of a cat using thecatapi.com API\n' +
+     '`!init` - Roll for initiative. Bot monitors for initiative inputs from any player in that channel.\n\tExample Responses: `Bofur 15`  or just `15`\n\tYou can change the name to whatever you like to add more than one entity to the initiative count.\n' +
+     '`!endinit` - Ends the initiative count and prints out the initiative order.\n' +
+     '`!addinit` - Adds an entity to the current initiative count.\n\tExample Uses: `!addinit Monster 15` or `!addinit 15`\n' +
+     '`!clearinit` - Clears the initiative.\n' +
+     '`!i` - Displays the current initiative order.\n' +
+     '')
 
-  if message.content.startswith('!roll 69') or message.content.startswith('!troll 69'):
+  if message.content.lower().startswith('!roll 69') or message.content.lower().startswith('!troll 69'):
     await message.channel.send('*nice*')
 
-  if message.content.startswith('!cat'):
+  if message.content.lower().startswith('!cat'):
     await message.channel.send(get_cat())
 
-  if message.content.startswith('!troll'):
+  if message.content.lower() == '!help':
+    await message.channel.send("Type !helpme for a list of commands!")
+
+  if message.content.lower().startswith('!troll'):
     await message.channel.send(get_int(message.content))
 
-  if message.content.startswith('!runi'):
+  if message.content.lower() == '!i' or message.content.lower().startswith("!listi"):
     await message.channel.send(print_initiative(message.guild.id))
 
-  if message.content.startswith('!addinit'):
-    await message.channel.send(run_initiative(message.guild.id))
+  if message.content.lower().startswith('!addinit'):
+    run_initiative(message.guild.id, message.author.display_name, message.content)
+    
+  if message.content.lower().startswith('!clearinit'):
+    clear_initiative(message.guild.id, message.author.display_name, message.content)
+    await message.channel.send("***Initiative Cleared***")
 
-  if message.content.startswith('!init'):
+  if message.content.lower().startswith('!init'):
     print(message.guild.id)
     clear_initiative(message.guild.id)
     channel = message.channel
@@ -113,11 +180,18 @@ async def on_message(message):
 
     def check(m):
       if m.channel == channel and not m.content.startswith('!') and not m.content.startswith('-') and not m.content.startswith('/') and m.author != client.user:
-        run_initiative(message.guild.id, m)
+        run_initiative(message.guild.id, m.author.display_name,  m.content)
       return m.content == '!endinit' and m.channel == channel
 
     await client.wait_for('message', check=check)
     await channel.send(print_initiative(message.guild.id))
+
+  if message.content.lower().startswith('!date'):
+    await message.channel.send(get_date(message.guild.id))
+  
+  if message.content.lower().startswith('!setdate'):
+    await message.channel.send(set_date(message.guild.id, message))
+  
 
 
 
