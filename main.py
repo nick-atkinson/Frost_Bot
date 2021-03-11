@@ -13,6 +13,7 @@ client = discord.Client()
 months = ["Földelse", "Pecunas", "Exon", "Pulchram", "Misdram", "Thaum"]
 holiday = ["The Fertility Festival", "The Market Festival", "The Dance of the Stars", "The Harvest Festival", "The Festival of Endurance", "The Year's End Festival"]
 days = ["Yinday", "Reiday", "Orsday", "Yekenday", "Graceday", "Blagday", "Innesday", "Visday", "Sattarday", "Greyday"]
+ttime = ["Morning` :sunrise_over_mountains:", "Midday` :sunny:", "Evening` :city_sunset:", "Night` :new_moon:"]
 
 def get_date(guild_id):
   if str(guild_id)+"date" in db:
@@ -63,6 +64,39 @@ def set_date(guild_id, message):
   except:
     return "Something is wrong with your formatting. Try:\n `!setdate Day Month Year`"
 
+def add_date(guild_id, message):
+  try:
+    if str(guild_id)+"date" in db:
+      array = message.content.lower().split(" ")
+      num = int(array[1])
+      unit = array[2]
+
+      date = db[str(guild_id)+"date"]
+
+      if unit.startswith("d"):
+        if int((date[0]+num) / 62) > 0:
+          date[1] = date[1] + int((date[0]+num)/62)
+        if int((date[1]) / 6) > 0:
+          date[2] = date[2] + int((date[1])/6)
+        date[1] = (date[1] % 6)
+        
+        date[0] = (date[0] + num) % 62
+        if date[0] == 0:
+          date[0]+=1
+      elif unit.startswith("m"):
+        if int((date[1]+num) / 6) > 0:
+          date[2] = date[2] + int((date[1]+num)/6)
+        date[1] = (date[1]+num) % 6
+      elif unit.startswith("y"):
+        date[2] = date[2]+num
+      else:
+        return "Something is wrong with your formatting. Try:\n `!adddate (+/-)Num (day/month/year)`"
+      db[str(guild_id)+"date"] = date
+      return "Successfully changed the date!"
+    else:
+      return "Please set the date first!"
+  except:
+    return "Something is wrong with your formatting. Try:\n `!adddate (+/-)Num (day/month/year)`"
 
 def get_cat():
   response = requests.get("https://api.thecatapi.com/v1/images/search")
@@ -88,7 +122,9 @@ def get_int(msg):
     return "`Improper Formatting.`"
 
 def run_initiative(guild_id, display_name, init_message):
-  if(init_message.startswith("!addinit")):
+  if(init_message.startswith("!addi")):
+    if guild_id not in db:
+      return ""
     init_message = init_message[init_message.index(" ")+1::]
   pName = display_name
   value = init_message.split(" ")
@@ -113,6 +149,7 @@ def run_initiative(guild_id, display_name, init_message):
     if set == 0:
       array.append(obj)
     db[guild_id] = array
+    db[str(guild_id)+"init"] = 0
   else:
     db[guild_id] = [obj]
 
@@ -124,11 +161,85 @@ def print_initiative(guild_id):
   if guild_id in db:
     strg = "__**Initiative**__\n"
     data = db[guild_id]
+    longest = 0
     for i in data:
-      strg = strg + "`" + i[0] + " - " + str(i[1]) + "`\n"
+      if len(i[0]) > longest :
+        longest = len(i[0])
+    count = 0
+    for i in data:
+      strg = strg + "`" + i[0] + " "*(longest-len(i[0])) + " - " + str(i[1]) + " "*(2-len(str(i[1]))) + "`"
+      if db[str(guild_id)+"init"] == count:
+        strg = strg + " :white_check_mark:"
+      strg = strg + "\n"
+      count+=1
     return strg
   else:
-    return "`You must roll for initiative first!`"
+    return "You must roll for initiative first!"
+
+def next_init(guild_id):
+  if guild_id in db:
+    db[str(guild_id)+"init"] = (db[str(guild_id)+"init"] + 1) % (len(db[guild_id]))
+    return print_initiative(guild_id)
+  else:
+    return "You must roll for initiative first!"
+
+def back_init(guild_id):
+  if guild_id in db:
+    db[str(guild_id)+"init"] = (db[str(guild_id)+"init"] - 1) % (len(db[guild_id]))
+    return print_initiative(guild_id)
+  else:
+    return "You must roll for initiative first!"
+
+def remove_init(guild_id, message):
+  if guild_id in db:
+    if len(message.content.split(" ")) < 2:
+      return "Entity does not exist in the initiative."
+    name = message.content.split(" ")[1]
+    data = db[guild_id]
+    for i in data:
+      if i[0].startswith(name):
+          data.remove(i)
+          break
+    db[guild_id] = data
+    return print_initiative(guild_id)
+  else:
+    return "You must roll for initiative first!"
+
+def set_time(guild_id, message):
+  try:
+    tm = message.content.lower().split(" ")[2]
+    num = 0
+    if tm.startswith("1") or tm.startswith("mi"):
+      num = 1
+    elif tm.startswith("2") or tm.startswith("e"):
+      num = 2
+    elif tm.startswith("3") or tm.startswith("n"):
+      num = 3
+    db[str(guild_id)+"time"] = num % 4
+    return get_time(guild_id)
+  except:
+    return "Improper command formatting. You could try:\n`!time set Morning`"
+
+def get_time(guild_id):
+  if str(guild_id)+"time" in db:
+    return "`It is " + ttime[db[str(guild_id)+"time"] % 4] 
+  else:
+    return "You must set the time first!"
+
+def add_time(guild_id):
+  if str(guild_id)+"time" in db:
+    db[str(guild_id)+"time"] = (db[str(guild_id)+"time"] + 1) % 4
+    return get_time(guild_id)
+  else:
+    return "You must set the time first!"
+
+def back_time(guild_id):
+  if str(guild_id)+"time" in db:
+    db[str(guild_id)+"time"] = (db[str(guild_id)+"time"] - 1) % 4
+    return get_time(guild_id)
+  else:
+    return "You must set the time first!"
+
 
 @client.event
 async def on_ready():
@@ -141,13 +252,24 @@ async def on_message(message):
 
   if message.content.lower().startswith('!helpme'):
     await message.channel.send('**FROST BOT Commands:**\n' +
-    '`!troll` - Returns a True-Random integer using Random.org API\n\tExample Use: `!troll 3d6`\n' +
-     '`!cat` - Displays a random image of a cat using thecatapi.com API\n' +
      '`!init` - Roll for initiative. Bot monitors for initiative inputs from any player in that channel.\n\tExample Responses: `Bofur 15`  or just `15`\n\tYou can change the name to whatever you like to add more than one entity to the initiative count.\n' +
      '`!endinit` - Ends the initiative count and prints out the initiative order.\n' +
      '`!addinit` - Adds an entity to the current initiative count.\n\tExample Uses: `!addinit Monster 15` or `!addinit 15`\n' +
+     '`!removeinit` - Removes the given entity if they exist in the initiative.\n\tExample Use: `!removeinit Charles`\n' +
      '`!clearinit` - Clears the initiative.\n' +
-     '`!i` - Displays the current initiative order.\n' +
+     '`!i` or `!listi` - Displays the current initiative order.\n' +
+     '`!nexti` - Continues to the next entity in the initiative.\n' +
+     '`!lasti` - Sets the initiative to the previous entity in the order.\n\n' +
+     '`!date` - Returns the current date in the Maetorian Empire.\n' +
+     '`!setdate` - Sets the date in the Maetorian Empire.\n\tExample Uses: `!setdate 4 Exon 999` or `!setdate 31 3 1247`\n' +
+     '`!adddate` - Increments the date by a given number of days, months, or years.\n\tExample Uses: `!adddate 1 month` or `!adddate 500 d`\n\n' +
+     '`!time` - Displays the current in-game time.\n' +
+     '`!time set` - Sets the current time to `Morning|Midday|Evening|Night`\n\tExample Use: `!time set Morning`\n' +
+     '`!time add` - Increments the current time.\n' +
+     '`!time rem` - Decrements the current time.\n\n' +
+     '`!troll` - Returns a True-Random integer using `Random.org` API\n\tExample Use: `!troll 3d6`\n' +
+     '`!ping` - pong!\n' +
+     '`!cat` - Displays a random image of a cat using `thecatapi.com` API\n' +
      '')
 
   if message.content.lower().startswith('!roll 69') or message.content.lower().startswith('!troll 69'):
@@ -157,7 +279,7 @@ async def on_message(message):
     await message.channel.send(get_cat())
 
   if message.content.lower() == '!help':
-    await message.channel.send("Type !helpme for a list of commands!")
+    await message.channel.send("Type `!helpme` for a list of commands!")
 
   if message.content.lower().startswith('!troll'):
     await message.channel.send(get_int(message.content))
@@ -165,11 +287,24 @@ async def on_message(message):
   if message.content.lower() == '!i' or message.content.lower().startswith("!listi"):
     await message.channel.send(print_initiative(message.guild.id))
 
-  if message.content.lower().startswith('!addinit'):
+  if message.content.lower().startswith('!addi'):
     run_initiative(message.guild.id, message.author.display_name, message.content)
+    await message.channel.send(print_initiative(message.guild.id))
+
+  if message.content.lower().startswith('!nexti'):
+    await message.channel.send(next_init(message.guild.id))
+
+  if message.content.lower().startswith('!lasti'):
+    await message.channel.send(back_init(message.guild.id))
+
+  if message.content.lower().startswith('!removei'):
+    await message.channel.send(remove_init(message.guild.id, message))
+
+  if message.content.lower().startswith('!ping'):
+    await message.channel.send("pong!")
     
-  if message.content.lower().startswith('!clearinit'):
-    clear_initiative(message.guild.id, message.author.display_name, message.content)
+  if message.content.lower().startswith('!cleari'):
+    clear_initiative(message.guild.id)
     await message.channel.send("***Initiative Cleared***")
 
   if message.content.lower().startswith('!init'):
@@ -181,7 +316,7 @@ async def on_message(message):
     def check(m):
       if m.channel == channel and not m.content.startswith('!') and not m.content.startswith('-') and not m.content.startswith('/') and m.author != client.user:
         run_initiative(message.guild.id, m.author.display_name,  m.content)
-      return m.content == '!endinit' and m.channel == channel
+      return m.content.startswith('!endi') and m.channel == channel
 
     await client.wait_for('message', check=check)
     await channel.send(print_initiative(message.guild.id))
@@ -191,6 +326,21 @@ async def on_message(message):
   
   if message.content.lower().startswith('!setdate'):
     await message.channel.send(set_date(message.guild.id, message))
+
+  if message.content.lower().startswith('!adddate'):
+    await message.channel.send(add_date(message.guild.id, message))
+
+  if message.content.lower() == '!time':
+    await message.channel.send(get_time(message.guild.id))
+
+  if message.content.lower().startswith('!time set'):
+    await message.channel.send(set_time(message.guild.id, message))
+
+  if message.content.lower().startswith('!time add'):
+    await message.channel.send(add_time(message.guild.id))
+    
+  if message.content.lower().startswith('!time rem'):
+    await message.channel.send(back_time(message.guild.id))
   
 
 
