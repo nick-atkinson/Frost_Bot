@@ -320,7 +320,7 @@ def give(message):
     item[0] = msg[1]
   item[2] = msg[3]
 
-  key = user + str(message.guild.id) + "inv"
+  key = user + '--' + str(message.guild.id) + "inve"
   if key in db:
     found = False
     arr = db[key]
@@ -339,12 +339,55 @@ def give(message):
     ess = 's'
   return '***Gave item' + ess + ' to '+ user + '***'
 
+def take(message):
+  mesg = message.content.split(' ')
+  item = ['', 0]
+  user = ''
+  msg = ['', '', '']
+  if mesg[0] == '!take':
+    msg[0] = mesg[1]
+    msg[1] = mesg[2]
+    msg[2] = mesg[3]
+  elif mesg[0].startswith('!inv'):
+    msg[0] = mesg[2]
+    msg[1] = mesg[3]
+    msg[2] = mesg[4]
+    
+  user = msg[0]
+  if msg[1].isnumeric():
+    item[1] = int(msg[1])
+    item[0] = msg[2]
+  elif msg[2].isnumeric():
+    item[1] = int(msg[2])
+    item[0] = msg[1]
+
+  key = user + '--' + str(message.guild.id) + "inve"
+  if key in db:
+    found = False
+    arr = db[key]
+    for it in arr:
+      if it[0] == item[0]:
+        it[1] -= item[1]
+        found = True
+        if it[1] <= 0:
+          arr.remove(it)
+        break
+    if not found:
+      return "***Item could not be found***"
+    db[key] = arr
+  else:
+     return "***This inventory does not exist***"
+  ess = ''
+  if item[1] > 1:
+    ess = 's'
+  return '***Took item' + ess + ' from '+ user + '***'
+
 def get_inventory(message):
   msg = message.content.split(" ")
   if len(msg) < 2:
     return "**You must specify an inventory to show**\nTry: `!inv Charles`"
   user = msg[1]
-  key = user + str(message.guild.id) + "inv"
+  key = user + '--' + str(message.guild.id) + "inve"
   if key not in db:
     return "***This inventory does not exist***"
   arr = db[key]
@@ -370,12 +413,22 @@ def clear_inventory(message):
     user = msg[2]
   elif msg[0] == "!empty":
     user = msg[1]
-  key = user + str(message.guild.id) + "inv"
+  key = user + '--' + str(message.guild.id) + "inve"
   if key in db:
     del db[key]
     return "***Emptied " + user + "'s inventory***"
   else:
     return "***This inventory does not exist***"
+
+def list_inventories(message):
+  guild = str(message.guild.id)
+  inventories = '**__Inventories Tracked in This Server__**\n'
+  for key in db.keys():
+    if (guild in key) and ("inve" in key):
+      inventories += ('`'+ key[0 : key.index('--')] + '`\n')
+  if not len(inventories) > 43:
+    return "***No inventories tracked in this Server***"
+  return inventories
 
 @client.event
 async def on_ready():
@@ -385,7 +438,6 @@ async def on_ready():
 async def on_message(message):
   if message.author == client.user:
     return
-  print(message.content)
   
   if message.content.lower().startswith('!helpme'):
     await message.channel.send('**__FROST BOT Commands:__**\n' +
@@ -398,7 +450,13 @@ async def on_message(message):
      '`!i` or `!listi` - Displays the current initiative order.\n' +
      '`!nexti` - Continues to the next entity in the initiative.\n' +
      '`!lasti` - Sets the initiative to the previous entity in the order.\n\n' +
-     '**Date**\n' +
+     '**Inventory**\n' +
+     '`!inv [Name]` / `!inventory [Name]` - Displays the given inventory.\n' + 
+     '`!give [Name] [#_Items] [Item_Name] [(Optional Emote) Item_Icon]` / `!inv add` - Gives an inventory an item.\n\tExample Use: `!give Gygax 20 Cookie :cookie:`\n' +
+     '`!take [Name] [#_Items] [Item_Name]` / `!inv rem` - Removes a number of items from an inventory.\n\tExample Use: `!take Drakaras 4 Gold`\n' +
+     '`!empty [Name]` / `!inv clear` - Clears a named inventory.\n\n')
+    await message.channel.send(
+     '\n**Date**\n' +
      '`!date` - Returns the current date in the Maetorian Empire.\n' +
      '`!setdate` - Sets the date in the Maetorian Empire.\n\tExample Uses: `!setdate 4 Exon 999` or `!setdate 31 3 1247`\n' +
      '`!adddate` - Increments the date by a given number of days, months, or years.\n\tExample Uses: `!adddate 1 month` or `!adddate 500 d`\n\n' +
@@ -414,7 +472,8 @@ async def on_message(message):
      '`!troll` - Returns a True-Random integer using `Random.org` API\n\tExample Use: `!troll 3d6`\n' +
      '`!ping` - pong!\n' +
      '`!cat` - Displays a random image of a cat using `thecatapi.com` API\n' +
-     '')
+     ''
+    )
 
   if message.content.lower().startswith('!roll 69') or message.content.lower().startswith('!troll 69'):
     await message.channel.send('*nice*')
@@ -428,7 +487,7 @@ async def on_message(message):
   if message.content.lower().startswith('!troll'):
     await message.channel.send(get_int(message.content))
 
-  if message.content.lower() == '!i' or message.content.lower().startswith("!listi"):
+  if message.content.lower() == '!i' or message.content.lower().startswith("!listi") and (message.content.lower() != '!listinv'):
     await message.channel.send(print_initiative(message.guild.id))
 ## Initiative Commands
   if message.content.lower().startswith('!addi'):
@@ -498,14 +557,18 @@ async def on_message(message):
   if message.content.lower().startswith('!give') or message.content.lower().startswith('!inv add') or message.content.lower().startswith('!inventory add'):
     await message.channel.send(give(message))
 
-  if (message.content.lower().startswith('!inv') or message.content.lower().startswith('!inventory')) and not (message.content.lower().startswith('!inv add') or message.content.lower().startswith('!inventory add') or message.content.lower().startswith("!inv clear")):
+  if message.content.lower().startswith('!take') or message.content.lower().startswith('!inv rem') or message.content.lower().startswith('!inventory rem'):
+    await message.channel.send(take(message))
+
+  if (message.content.lower().startswith('!inv') or message.content.lower().startswith('!inventory')) and not (message.content.lower().startswith('!inv add') or message.content.lower().startswith('!inventory add') or message.content.lower().startswith("!inv clear") or message.content.lower() == '!inventories'):
     await message.channel.send(get_inventory(message))
 
   if (message.content.lower().startswith('!empty') or message.content.lower().startswith('!inv clear')) and not (message.content.lower().startswith('!clearinit')):
     await message.channel.send(clear_inventory(message))
 
-  if (message.content.lower() == '!test'):
-    await message.channel.send('<:catpog:822185926447857784>')
+  if (message.content.lower().startswith('!list inv') or message.content.lower().startswith('!listinv') or message.content.lower().startswith('!inventories')):
+    await message.channel.send(list_inventories(message))
+
 
 keep_alive()
 client.run(os.getenv('TOKEN'))
