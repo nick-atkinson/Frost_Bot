@@ -293,6 +293,90 @@ def rest(guild_id):
   db[str(guild_id)+"time"] = 0
   return get_time(guild_id) + " `You have rested`"
 
+def give(message):
+  mesg = message.content.split(' ')
+  item = ['', 0, '']
+  user = ''
+  msg = ['', '', '', '']
+  if mesg[0] == '!give':
+    msg[0] = mesg[1]
+    msg[1] = mesg[2]
+    msg[2] = mesg[3]
+    if len(mesg) > 4:
+      msg[3] = mesg[4]
+  elif mesg[0].startswith('!inv'):
+    msg[0] = mesg[2]
+    msg[1] = mesg[3]
+    msg[2] = mesg[4]
+    if len(mesg) > 5:
+      msg[3] = mesg[5]
+    
+  user = msg[0]
+  if msg[1].isnumeric():
+    item[1] = int(msg[1])
+    item[0] = msg[2]
+  elif msg[2].isnumeric():
+    item[1] = int(msg[2])
+    item[0] = msg[1]
+  item[2] = msg[3]
+
+  key = user + str(message.guild.id) + "inv"
+  if key in db:
+    found = False
+    arr = db[key]
+    for it in arr:
+      if it[0] == item[0]:
+        it[1] += item[1]
+        found = True
+        break
+    if not found:
+      arr.append(item)
+    db[key] = arr
+  else:
+     db[key] = [item]
+  ess = ''
+  if item[1] > 1:
+    ess = 's'
+  return '***Gave item' + ess + ' to '+ user + '***'
+
+def get_inventory(message):
+  msg = message.content.split(" ")
+  if len(msg) < 2:
+    return "**You must specify an inventory to show**\nTry: `!inv Charles`"
+  user = msg[1]
+  key = user + str(message.guild.id) + "inv"
+  if key not in db:
+    return "***This inventory does not exist***"
+  arr = db[key]
+  itemList = '**__' + user + "'s Inventory:__**\n"
+  longest = 0
+  for item in arr:
+    if(longest < len(item[0])):
+      longest = len(item[0])
+
+  for item in arr:
+    intLen = 2
+    if len(str(item[1])) == 2:
+      intLen = 1
+    itemList += ('`' + str(item[1]) + ' '*intLen + '× ' + item[0] + ' '*(longest-len(item[0])) + '` ' + item[2] + '\n')
+  return itemList
+
+def clear_inventory(message):
+  msg = message.content.split(" ")
+  if len(msg) < 2:
+    return "**You must specify an inventory to clear**\nTry: `!clear Charles`"
+  user = ''
+  if msg[0] == "!inv":
+    user = msg[2]
+  elif msg[0] == "!empty":
+    user = msg[1]
+  key = user + str(message.guild.id) + "inv"
+  if key in db:
+    del db[key]
+    return "***Emptied " + user + "'s inventory***"
+  else:
+    return "***This inventory does not exist***"
+
 @client.event
 async def on_ready():
   print('Welcome {0.user}'.format(client))
@@ -301,9 +385,11 @@ async def on_ready():
 async def on_message(message):
   if message.author == client.user:
     return
+  print(message.content)
   
   if message.content.lower().startswith('!helpme'):
-    await message.channel.send('**FROST BOT Commands:**\n' +
+    await message.channel.send('**__FROST BOT Commands:__**\n' +
+     '**Initiative**\n' +
      '`!init` - Roll for initiative. Bot monitors for initiative inputs from any player in that channel.\n\tExample Responses: `Bofur 15`  or just `15`\n\tYou can change the name to whatever you like to add more than one entity to the initiative count.\n' +
      '`!endinit` - Ends the initiative count and prints out the initiative order.\n' +
      '`!addinit` - Adds an entity to the current initiative count.\n\tExample Uses: `!addinit Monster 15` or `!addinit 15`\n' +
@@ -312,9 +398,11 @@ async def on_message(message):
      '`!i` or `!listi` - Displays the current initiative order.\n' +
      '`!nexti` - Continues to the next entity in the initiative.\n' +
      '`!lasti` - Sets the initiative to the previous entity in the order.\n\n' +
+     '**Date**\n' +
      '`!date` - Returns the current date in the Maetorian Empire.\n' +
      '`!setdate` - Sets the date in the Maetorian Empire.\n\tExample Uses: `!setdate 4 Exon 999` or `!setdate 31 3 1247`\n' +
      '`!adddate` - Increments the date by a given number of days, months, or years.\n\tExample Uses: `!adddate 1 month` or `!adddate 500 d`\n\n' +
+     '**Time**\n' +
      '`!time` - Displays the current in-game time.\n' +
      '`!time set` - Sets the current time to `Morning|Midday|Evening|Night`\n\tExample Use: `!time set Morning`\n' +
      '`!time add` - Increments the current time.\n' +
@@ -322,6 +410,7 @@ async def on_message(message):
      '`!eat` - You eat! Will set yourself as having eaten for that block in time.\n'+
      '`!nutrition` - Displays who has eaten that day. Resets upon `!rest`\n' +
      '`!rest` - Resets the day, as well as those who have eaten.\n\n' +
+     '**Misc.**\n' +
      '`!troll` - Returns a True-Random integer using `Random.org` API\n\tExample Use: `!troll 3d6`\n' +
      '`!ping` - pong!\n' +
      '`!cat` - Displays a random image of a cat using `thecatapi.com` API\n' +
@@ -341,7 +430,7 @@ async def on_message(message):
 
   if message.content.lower() == '!i' or message.content.lower().startswith("!listi"):
     await message.channel.send(print_initiative(message.guild.id))
-
+## Initiative Commands
   if message.content.lower().startswith('!addi'):
     run_initiative(message.guild.id, message.author.display_name, message.content)
     await message.channel.send(print_initiative(message.guild.id))
@@ -375,7 +464,7 @@ async def on_message(message):
 
     await client.wait_for('message', check=check)
     await channel.send(print_initiative(message.guild.id))
-
+## Date commands
   if message.content.lower().startswith('!date'):
     await message.channel.send(get_date(message.guild.id))
   
@@ -384,7 +473,7 @@ async def on_message(message):
 
   if message.content.lower().startswith('!adddate'):
     await message.channel.send(add_date(message.guild.id, message))
-
+## Time commands
   if message.content.lower() == '!time':
     await message.channel.send(get_time(message.guild.id))
 
@@ -405,6 +494,18 @@ async def on_message(message):
 
   if message.content.lower().startswith('!rest'):
     await message.channel.send(rest(message.guild.id))
+## Inventory Commands
+  if message.content.lower().startswith('!give') or message.content.lower().startswith('!inv add') or message.content.lower().startswith('!inventory add'):
+    await message.channel.send(give(message))
+
+  if (message.content.lower().startswith('!inv') or message.content.lower().startswith('!inventory')) and not (message.content.lower().startswith('!inv add') or message.content.lower().startswith('!inventory add') or message.content.lower().startswith("!inv clear")):
+    await message.channel.send(get_inventory(message))
+
+  if (message.content.lower().startswith('!empty') or message.content.lower().startswith('!inv clear')) and not (message.content.lower().startswith('!clearinit')):
+    await message.channel.send(clear_inventory(message))
+
+  if (message.content.lower() == '!test'):
+    await message.channel.send('<:catpog:822185926447857784>')
 
 keep_alive()
 client.run(os.getenv('TOKEN'))
