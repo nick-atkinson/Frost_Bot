@@ -401,6 +401,8 @@ def get_inventory(message):
     intLen = 2
     if len(str(item[1])) == 2:
       intLen = 1
+    if len(str(item[1])) == 3:
+      intLen = 0
     itemList += ('`' + str(item[1]) + ' '*intLen + '× ' + item[0] + ' '*(longest-len(item[0])) + '` ' + item[2] + '\n')
   return itemList
 
@@ -430,6 +432,61 @@ def list_inventories(message):
     return "***No inventories tracked in this Server***"
   return inventories
 
+def define_item(message):
+  msg = message.content.split(' ')
+  if (len(msg) < 2):
+    return "***Please specify an item***\nUsage: `!define Sword *A simple longsword*`"
+  item = msg[1]
+  description = message.content[message.content.index(item)+len(item)+1:]
+  key = str(message.guild.id) + "item-" + item.lower()
+  if key in db.keys():
+    db[key] = description
+    return "***Overwrote existing item***" 
+  db[key] = description
+  return "***Item added***"
+
+def identify_item(message):
+  msg = message.content.split(' ')
+  if (len(msg) < 2):
+    return "***Please specify an item***\nUsage: `!identify Sword`"
+  item = msg[1]
+  key = str(message.guild.id) + "item-" + item.lower()
+  inventory_key = item + '--' + str(message.guild.id) + "inve"
+  if key in db.keys():
+    return "**" + item + " -** " + db[key]
+  if inventory_key in db.keys():
+    inv = db[inventory_key]
+    return_str = "**__" + item + ":__**\n"
+
+    for thing in inv:
+      temp_key = str(message.guild.id) + "item-" + thing[0].lower()
+      if temp_key in db.keys():
+        return_str += "**" + thing[0] + " -** " + db[temp_key] + "\n"
+    if len(return_str) == (10 + len(item)):
+      return "***" + item + " had no identifiable items***"
+    return return_str
+  return "***Item not found***"
+
+def remove_item(message):
+  msg = message.content.split(' ')
+  if len(msg) < 2:
+    return "***Please specify an item***\nUsage: `!remove Sword`"
+  item = msg[1]
+  key = str(message.guild.id) + "item-" + item.lower()
+  if key in db.keys():
+    del db[key]
+    return "***Item deleted***"
+  return "***Item not found***"
+
+def list_items(message):
+  items = "***__Items tracked in This Server__***\n"
+  for key in db.keys():
+    if (str(message.guild.id) in key) and ("item-" in key):
+      items += ("`" + key[key.index("-")+1:] + '`\n')
+  if not len(items) > 39:
+    return "***No inventories tracked in this Server***"
+  return items
+
 @client.event
 async def on_ready():
   print('Welcome {0.user}'.format(client))
@@ -454,7 +511,12 @@ async def on_message(message):
      '`!inv [Name]` / `!inventory [Name]` - Displays the given inventory.\n' + 
      '`!give [Name] [#_Items] [Item_Name] [(Optional Emote) Item_Icon]` / `!inv add` - Gives an inventory an item.\n\tExample Use: `!give Gygax 20 Cookie :cookie:`\n' +
      '`!take [Name] [#_Items] [Item_Name]` / `!inv rem` - Removes a number of items from an inventory.\n\tExample Use: `!take Drakaras 4 Gold`\n' +
-     '`!empty [Name]` / `!inv clear` - Clears a named inventory.\n\n')
+     '`!empty [Name]` / `!inv clear` - Clears a named inventory.\n\n' +
+     '**Items**\n' +
+     '`!identify [Item]` - Displays the identified description of an item. Will also identify the contents of entire inventories!\n' + 
+     '`!define [Item] [Description]` - Adds an item that can be identified.\n\tExample Use: `!define Longsword *A simple Longsword.*`\n' +
+     '`!remove [Item]` - Deletes an item and makes it no longer identifiable.\n' +
+     '`!items` - Lists the identifiable items on the Server.\n\n')
     await message.channel.send(
      '\n**Date**\n' +
      '`!date` - Returns the current date in the Maetorian Empire.\n' +
@@ -568,6 +630,19 @@ async def on_message(message):
 
   if (message.content.lower().startswith('!list inv') or message.content.lower().startswith('!listinv') or message.content.lower().startswith('!inventories')):
     await message.channel.send(list_inventories(message))
+
+  if (message.content.lower().startswith('!define')):
+    await message.channel.send(define_item(message))
+  
+  if (message.content.lower().startswith('!identify')):
+    await message.channel.send(identify_item(message))
+
+  if (message.content.lower().startswith('!remove')):
+    await message.channel.send(remove_item(message))
+
+  if (message.content.lower().startswith('!items')):
+    await message.channel.send(list_items(message))
+
 
 
 keep_alive()
