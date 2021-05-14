@@ -575,7 +575,7 @@ async def on_message(message):
   if message.content.lower().startswith('!ping'):
     await message.channel.send("pong!")
     
-  if message.content.lower().startswith('!cleari'):
+  if message.content.lower().startswith('!cleari') and not (message.content == '!clearitems'):
     clear_initiative(message.guild.id)
     await message.channel.send("***Initiative Cleared***")
 
@@ -650,6 +650,8 @@ async def on_message(message):
   if (message.content.lower().startswith('!items')):
     await message.channel.send(list_items(message))
 
+  if (message.content.lower().startswith('!clearitems')):
+    await message.channel.send(clear_items(message))
 
 
 keep_alive()
