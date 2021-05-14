@@ -487,6 +487,12 @@ def list_items(message):
     return "***No inventories tracked in this Server***"
   return items
 
+def clear_items(message):
+  for key in db.keys():
+    if (str(message.guild.id) in key) and ("item-" in key):
+      del db[key]
+  return "***Cleared stored items***"
+
 @client.event
 async def on_ready():
   print('Welcome {0.user}'.format(client))
@@ -516,6 +522,7 @@ async def on_message(message):
      '`!identify [Item]` - Displays the identified description of an item. Will also identify the contents of entire inventories!\n' + 
      '`!define [Item] [Description]` - Adds an item that can be identified.\n\tExample Use: `!define Longsword *A simple Longsword.*`\n' +
      '`!remove [Item]` - Deletes an item and makes it no longer identifiable.\n' +
+     '`!clearitems` - Clears all locally stored items in the server.\n' +
      '`!items` - Lists the identifiable items on the Server.\n\n')
     await message.channel.send(
      '\n**Date**\n' +
