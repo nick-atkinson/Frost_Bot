@@ -9,12 +9,24 @@ from replit import db
 from enum import Enum
 from keep_alive import keep_alive
 
+#FrostBot-
+#A discord bot for tracking random D&D stuff for my friends!
+#Type !helpme for a list of commands
+#@author: Nick Atkinson
+#-----------------------------
+#Data for Date setting. The Maetorian calendar
+#-----------------------------
 client = discord.Client()
 months = ["Földelse", "Pecunas", "Exon", "Pulchram", "Misdram", "Thaum"]
 holiday = ["The Fertility Festival", "The Market Festival", "The Dance of the Stars", "The Harvest Festival", "The Festival of Endurance", "The Year's End Festival"]
 days = ["Yinday", "Reiday", "Orsday", "Yekenday", "Graceday", "Blagday", "Innesday", "Visday", "Sattarday", "Greyday"]
 ttime = ["Morning` :sunrise_over_mountains:", "Midday` :sunny:", "Evening` :city_sunset:", "Night` :new_moon:"]
 
+#-----------------------------
+# Methods to be called that return message strings.
+#-----------------------------
+
+#Returns the current stored date in the Replit DB
 def get_date(guild_id):
   if str(guild_id)+"date" in db:
     array = db[str(guild_id)+"date"]
@@ -35,6 +47,7 @@ def get_date(guild_id):
     return "The date is: " + weekday + ", the " + str(array[0]) + prefix + " of " + months[array[1]] + ", " + str(array[2])
   return "No date set yet."
 
+#Sets the date in Maetorian time in the Replit DB
 def set_date(guild_id, message):
   try:
     date = message.content[9::].lower().split(" ")
@@ -64,6 +77,7 @@ def set_date(guild_id, message):
   except:
     return "Something is wrong with your formatting. Try:\n `!setdate Day Month Year`"
 
+#Function to increment a Maetorian date... works sometimes
 def add_date(guild_id, message):
   try:
     if str(guild_id)+"date" in db:
@@ -98,12 +112,14 @@ def add_date(guild_id, message):
   except:
     return "Something is wrong with your formatting. Try:\n `!adddate (+/-)Num (day/month/year)`"
 
+#Standard API call to theCatApi.com Returns a URL of a cat
 def get_cat():
   response = requests.get("https://api.thecatapi.com/v1/images/search")
   json_data = json.loads(response.text)
   cat_url = json_data[0]['url']
   return cat_url
   
+#API Call to Random.org to return an amount of random numbers. Formats it like a dice roll.
 def get_int(msg):
   msg = msg[7::].lower().strip(" ")
   if ("d" in msg):
@@ -121,17 +137,24 @@ def get_int(msg):
   else:
     return "`Improper Formatting.`"
 
+#Initial initiative call. Will prompt for initiative counts and wait for input from users. Terminates on !endinit
 def run_initiative(guild_id, display_name, init_message):
   if(init_message.startswith("!addi")):
     if guild_id not in db:
       return ""
     init_message = init_message[init_message.index(" ")+1::]
+  if " " in display_name:
+    display_name = display_name[:display_name.index(" "):]
   pName = display_name
   value = init_message.split(" ")
   roll=""
   if len(value) >= 2:
-    pName = value[0]
-    roll = int(value[1])
+    if value[0].isnumeric():
+      pName = value[1]
+      roll = int(value[0])
+    elif value[1].isnumeric():
+      pName = value[0]
+      roll = int(value[1])
   else:
     roll = int(value[0])
 
@@ -153,10 +176,12 @@ def run_initiative(guild_id, display_name, init_message):
   else:
     db[guild_id] = [obj]
 
+#Clears that discord channel's initiative
 def clear_initiative(guild_id):
   if guild_id in db:
     del db[guild_id]
 
+#Outputs a formatted initiative for that guild
 def print_initiative(guild_id):
   if guild_id in db:
     strg = "__**Initiative**__\n"
@@ -176,6 +201,8 @@ def print_initiative(guild_id):
   else:
     return "You must roll for initiative first!"
 
+#TODO: Add emoji reaction functionality to forward/back/remove
+#Increments the current index in the initiative order
 def next_init(guild_id):
   if guild_id in db:
     db[str(guild_id)+"init"] = (db[str(guild_id)+"init"] + 1) % (len(db[guild_id]))
@@ -183,6 +210,7 @@ def next_init(guild_id):
   else:
     return "You must roll for initiative first!"
 
+#Decrements the current index in the initiative order
 def back_init(guild_id):
   if guild_id in db:
     db[str(guild_id)+"init"] = (db[str(guild_id)+"init"] - 1) % (len(db[guild_id]))
@@ -190,6 +218,7 @@ def back_init(guild_id):
   else:
     return "You must roll for initiative first!"
 
+#Removes an individual from the initiative
 def remove_init(guild_id, message):
   if guild_id in db:
     if len(message.content.split(" ")) < 2:
@@ -205,6 +234,7 @@ def remove_init(guild_id, message):
   else:
     return "You must roll for initiative first!"
 
+#Sets the time (Morning/Noon/Evening/Night)
 def set_time(guild_id, message):
   try:
     tm = message.content.lower().split(" ")[2]
@@ -220,12 +250,14 @@ def set_time(guild_id, message):
   except:
     return "Improper command formatting. You could try:\n`!time set Morning`"
 
+#Returns the current time in an emoji-formatted message
 def get_time(guild_id):
   if str(guild_id)+"time" in db:
     return "`It is " + ttime[db[str(guild_id)+"time"] % 4] 
   else:
     return "You must set the time first!"
 
+#Increments time 
 def add_time(guild_id):
   if str(guild_id)+"time" in db:
     db[str(guild_id)+"time"] = (db[str(guild_id)+"time"] + 1) % 4
@@ -233,6 +265,7 @@ def add_time(guild_id):
   else:
     return "You must set the time first!"
 
+#Decrements time
 def back_time(guild_id):
   if str(guild_id)+"time" in db:
     db[str(guild_id)+"time"] = (db[str(guild_id)+"time"] - 1) % 4
@@ -240,6 +273,7 @@ def back_time(guild_id):
   else:
     return "You must set the time first!"
 
+#Eating functionality, will add user to eaten list, and mark food pop based on time
 def eat(guild_id, display_name):
   if str(guild_id)+"time" not in db:
     return "You must set the time first!"
@@ -262,6 +296,7 @@ def eat(guild_id, display_name):
     db[str(guild_id)+"eat"] = [obj]
   return display_name + " has eaten!"
 
+#Returns formatted box of who has eaten and when
 def nutrition(guild_id):
   if str(guild_id)+"eat" not in db:
     return "No one has eaten yet!"
@@ -287,12 +322,14 @@ def nutrition(guild_id):
     out = out + name[0] + " "*(longest - len(name[0])) + "   :"+ eaten[0] +":     " + "   :"+ eaten[1] +":     " + "   :"+ eaten[2] +":     " + "   :"+ eaten[3] +":     \n"
   return out 
 
+#Sets time to morning, and resets eaten counter
 def rest(guild_id):
   if str(guild_id)+"eat" in db:
     del db[str(guild_id)+"eat"]
   db[str(guild_id)+"time"] = 0
   return get_time(guild_id) + " `You have rested`"
 
+#Add an item to an inventory
 def give(message):
   mesg = message.content.split(' ')
   item = ['', 0, '']
@@ -339,6 +376,7 @@ def give(message):
     ess = 's'
   return '***Gave item' + ess + ' to '+ user + '***'
 
+#Remove an item from an inventory
 def take(message):
   mesg = message.content.split(' ')
   item = ['', 0]
@@ -382,6 +420,7 @@ def take(message):
     ess = 's'
   return '***Took item' + ess + ' from '+ user + '***'
 
+#Return the formatted contents of a named inventory
 def get_inventory(message):
   msg = message.content.split(" ")
   if len(msg) < 2:
@@ -406,6 +445,7 @@ def get_inventory(message):
     itemList += ('`' + str(item[1]) + ' '*intLen + '× ' + item[0] + ' '*(longest-len(item[0])) + '` ' + item[2] + '\n')
   return itemList
 
+#Clear a named inventory
 def clear_inventory(message):
   msg = message.content.split(" ")
   if len(msg) < 2:
@@ -422,6 +462,7 @@ def clear_inventory(message):
   else:
     return "***This inventory does not exist***"
 
+#List all tracked inventories in the DB
 def list_inventories(message):
   guild = str(message.guild.id)
   inventories = '**__Inventories Tracked in This Server__**\n'
@@ -432,6 +473,7 @@ def list_inventories(message):
     return "***No inventories tracked in this Server***"
   return inventories
 
+#Define an item with a description
 def define_item(message):
   msg = message.content.split(' ')
   if (len(msg) < 2):
@@ -445,6 +487,7 @@ def define_item(message):
   db[key] = description
   return "***Item added***"
 
+#Return the item's description
 def identify_item(message):
   msg = message.content.split(' ')
   if (len(msg) < 2):
@@ -467,6 +510,7 @@ def identify_item(message):
     return return_str
   return "***Item not found***"
 
+#Remove a tracked, described item
 def remove_item(message):
   msg = message.content.split(' ')
   if len(msg) < 2:
@@ -478,6 +522,7 @@ def remove_item(message):
     return "***Item deleted***"
   return "***Item not found***"
 
+#List all tracked special items
 def list_items(message):
   items = "***__Items tracked in This Server__***\n"
   for key in db.keys():
@@ -487,21 +532,30 @@ def list_items(message):
     return "***No inventories tracked in this Server***"
   return items
 
+#Clear all tracked special items from the server
 def clear_items(message):
   for key in db.keys():
     if (str(message.guild.id) in key) and ("item-" in key):
       del db[key]
   return "***Cleared stored items***"
 
+#-----------------------------
+# Input section. Detects certain server messages
+# and calls the correct methods based on what is said.
+#-----------------------------
 @client.event
 async def on_ready():
   print('Welcome {0.user}'.format(client))
 
+#On-Message detection
 @client.event
 async def on_message(message):
   if message.author == client.user:
     return
+  #print the requested command
+  print(message.content)
   
+  #Help function to print out possible commands
   if message.content.lower().startswith('!helpme'):
     await message.channel.send('**__FROST BOT Commands:__**\n' +
      '**Initiative**\n' +
@@ -544,21 +598,33 @@ async def on_message(message):
      ''
     )
 
-  if message.content.lower().startswith('!roll 69') or message.content.lower().startswith('!troll 69'):
+  #Nice
+  if message.content.lower().startswith('!roll 69') or message.content.lower().startswith('!troll 69') or 'd69' in message.content.lower():
     await message.channel.send('*nice*')
-
+  #Call to the CatAPI
   if message.content.lower().startswith('!cat'):
     await message.channel.send(get_cat())
-
+  #You're welcome
+  if message.content.lower().startswith('ty'):
+    await message.channel.send('yw')
+  #Helpme function
   if message.content.lower() == '!help':
     await message.channel.send("Type `!helpme` for a list of commands!")
-
+  #True-random command
   if message.content.lower().startswith('!troll'):
     await message.channel.send(get_int(message.content))
 
-  if message.content.lower() == '!i' or message.content.lower().startswith("!listi") and (message.content.lower() != '!listinv'):
-    await message.channel.send(print_initiative(message.guild.id))
 ## Initiative Commands
+  if message.content.lower() == '!i' or message.content.lower().startswith("!listi") and (message.content.lower() != '!listinv'):
+    sent_msg = await message.channel.send(print_initiative(message.guild.id))
+    await sent_msg.add_reaction("⬅️")
+    await sent_msg.add_reaction("⏫")
+    await sent_msg.add_reaction("⏬")
+    await sent_msg.add_reaction("➡️")
+    @client.event
+    async def on_reaction_add(sent_msg):
+      await sent_msg.channel.send("Test")
+
   if message.content.lower().startswith('!addi'):
     run_initiative(message.guild.id, message.author.display_name, message.content)
     await message.channel.send(print_initiative(message.guild.id))
@@ -584,7 +650,7 @@ async def on_message(message):
     clear_initiative(message.guild.id)
     channel = message.channel
     await channel.send('__***Roll For Initiative***__')
-
+    #Asynchronous check for initiative responses
     def check(m):
       if m.channel == channel and not m.content.startswith('!') and not m.content.startswith('-') and not m.content.startswith('/') and m.author != client.user and not m.author.display_name.startswith("Dice"):
         run_initiative(message.guild.id, m.author.display_name,  m.content)

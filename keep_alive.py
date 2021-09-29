@@ -1,6 +1,6 @@
 from flask import Flask
 from threading import Thread
-
+# KeepAlive function. Uses flask to keep the bot from turning off
 app = Flask('')
 
 @app.route('/')
